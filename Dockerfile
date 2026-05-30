@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     texlive-xetex \
     texlive-fonts-recommended \
     texlive-plain-generic \
+    fonts-liberation \
+    fontconfig \
+    && fc-cache -f -v \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear carpeta de trabajo
