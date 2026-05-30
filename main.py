@@ -9,7 +9,7 @@ import pypdf
 # Importamos tu convertidor
 from convertidor import markdown_a_pdf
 # Importamos tu traductor real
-from traductor import traducir_texto_markdown  
+from traductor import traducir_texto_matematico 
 
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
@@ -69,7 +69,7 @@ async def traducir_pdf(file: UploadFile = File(...)):
         inicio_fase = time.time()
         
         # Enviamos el texto extraído a tu traductor avanzado
-        texto_traducido = traducir_texto_markdown(texto_extraido)
+        texto_traducido = traducir_texto_matematico(texto_extraido)
         
         with open(ruta_md_traducido, "w", encoding="utf-8") as f:
             f.write(texto_traducido)
