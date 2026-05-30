@@ -1,4 +1,3 @@
-#convertidor.py
 import os
 import re
 import subprocess
@@ -15,7 +14,7 @@ def preprocesar_notas_al_pie(texto_md):
 def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
     """
     Procesa el archivo Markdown, limpia caracteres extraños, 
-    y compila a PDF usando Pandoc + XeLaTeX.
+    y compila a PDF usando Pandoc + XeLaTeX con diagnóstico detallado.
     """
     if not ruta_pdf_salida:
         ruta_pdf_salida = ruta_md.replace(".md", ".pdf")
@@ -26,35 +25,39 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
 
     print(f"🏛️ Iniciando compilación académica...")
     try:
-        # 1. Leer original y procesar notas al pie
+        # 1. Leer original
         with open(ruta_md, "r", encoding="utf-8") as f:
             contenido = f.read()
+        
+        # --- DIAGNÓSTICO: Tamaño del archivo ---
+        print(f"📊 Tamaño del contenido recibido: {len(contenido)} caracteres")
 
         contenido_corregido = preprocesar_notas_al_pie(contenido)
-
-        # 2. LIMPIEZA PROFUNDA: Evita caracteres que rompen XeLaTeX en Linux
+        
+        # 2. LIMPIEZA PROFUNDA: Elimina caracteres que rompen XeLaTeX
         contenido_limpio = contenido_corregido.encode('utf-8', 'ignore').decode('utf-8')
         
         with open(ruta_md_temp, "w", encoding="utf-8") as f:
             f.write(contenido_limpio)
+        
+        print(f"✅ Archivo temporal creado: {os.path.getsize(ruta_md_temp)} bytes")
 
-        # 3. Construcción del comando según el entorno
+        # 3. Construcción del comando
         if os.name == 'posix':
-            # Configuración para el Servidor (Render/Linux)
             comando = [
                 "pandoc", ruta_md_temp,
                 "-o", ruta_pdf_salida,
                 "--pdf-engine=xelatex",
-                "--standalone",              # Asegura proceso completo
+                "--standalone",
                 "--top-level-division=chapter",
                 "-V", "geometry:margin=1in",
                 "-V", "mainfont=Liberation Serif",
                 "-V", "fontsize=12pt",
                 "-V", "linestretch=1.5",
-                "--wrap=auto"
+                "--wrap=auto",
+                "--verbose"  # <--- Habilita logs detallados de Pandoc
             ]
         else:
-            # Configuración para Windows + WSL
             ruta_wsl_md = ruta_md_temp.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
             ruta_wsl_pdf = ruta_pdf_salida.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
             comando = [
@@ -65,22 +68,27 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
                 "-V", "mainfont=Liberation Serif"
             ]
 
-        # 4. Ejecución con captura de errores detallada
+        # 4. Ejecución con diagnóstico de salida
+        print(f"⚙️ Ejecutando Pandoc...")
         resultado = subprocess.run(comando, capture_output=True, text=True)
         
+        # --- DIAGNÓSTICO: Salida de Pandoc ---
+        if resultado.stdout:
+            print(f"📋 Salida de Pandoc (stdout): {resultado.stdout[:1000]}")
+        
         if resultado.returncode != 0:
-            print(f"❌ ERROR EN PANDOC:\nSTDOUT: {resultado.stdout}\nSTDERR: {resultado.stderr}")
+            print(f"❌ ERROR EN PANDOC:\nSTDERR: {resultado.stderr}")
             raise subprocess.CalledProcessError(resultado.returncode, comando, stderr=resultado.stderr)
 
         # 5. Limpieza
         if os.path.exists(ruta_md_temp):
             os.remove(ruta_md_temp)
 
-        print(f"🚀 PDF generado exitosamente.")
+        print(f"🚀 PDF generado exitosamente. Tamaño final: {os.path.getsize(ruta_pdf_salida) if os.path.exists(ruta_pdf_salida) else 0} bytes")
         return ruta_pdf_salida
 
     except Exception as e:
-        print(f"❌ Error crítico: {e}")
+        print(f"❌ Error crítico en convertidor: {e}")
         if 'ruta_md_temp' in locals() and os.path.exists(ruta_md_temp):
             os.remove(ruta_md_temp)
         return None
