@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Nota: Dejamos load_dotenv() como respaldo secundario por si ejecutas este script por separado
+# Carga el archivo .env si estás en local
 load_dotenv()
 
 def verificar_internet():
@@ -19,7 +19,7 @@ def verificar_internet():
 def traducir_con_gemini_nube(texto_markdown, prompt_instrucciones, api_key):
     """Envía la traducción a los servidores de Google Gemini."""
     print("☁️ Conectando con los servidores de Google Gemini en la nube (Proceso rápido)...")
-
+    
     # Inicializa el cliente oficial moderno de Google con tu variable unificada
     client = genai.Client(api_key=api_key)
 
@@ -43,7 +43,7 @@ def traducir_texto_matematico(texto_markdown):
 
     prompt_sistema = (
         "Eres un traductor académico de élite, especializado en economía matemática, "
-        "teoría macroeconómica avanzada (incluyendo programación dinámica) y optimización intertemporal.\n\n"
+        "teoría macroeconómica avanzada (incluyendo programación dinámica) and optimización intertemporal.\n\n"
         "Tu tarea es traducir el texto en Markdown adjunto del INGLÉS al ESPAÑOL cumpliendo estas reglas:\n\n"
         "1. ESTRUCTURA: Preserva intacto el formato Markdown (encabezados, listas, negritas).\n\n"
         "2. CORRECCIÓN UNIVERSAL DE PARÉNTESIS Y CORCHETES ROTOS:\n"
@@ -62,19 +62,32 @@ def traducir_texto_matematico(texto_markdown):
     api_key = os.getenv("GOOGLE_API_KEY")
     tiene_api_key = api_key is not None and len(api_key) > 10
 
+    # Detectamos de forma automática si estamos corriendo dentro del servidor de Render
+    es_servidor = os.getenv("RENDER") is not None
+
     if tiene_internet and tiene_api_key:
         try:
             return traducir_con_gemini_nube(texto_markdown, prompt_sistema, api_key)
         except Exception as e:
-            print(f"⚠️ Error al conectar con la nube: {e}. Aplicando plan de respaldo...")
+            print(f"⚠️ Error al conectar con la nube: {e}.")
+            # CORRECCIÓN DE PRODUCCIÓN: Evita invocar Ollama si estamos en la nube
+            if es_servidor:
+                raise RuntimeError(f"El servidor de Render no pudo procesar la traducción con Gemini: {e}")
+            
+            print("Aplicando plan de respaldo local...")
             return traducir_con_ollama_local(texto_markdown, prompt_sistema)
     else:
+        # CORRECCIÓN DE PRODUCCIÓN: Si falta la API Key o no hay red en el servidor, detenemos el proceso con elegancia
+        if es_servidor:
+            if not tiene_api_key:
+                raise ValueError("Error crítico: GOOGLE_API_KEY no se encuentra configurada en el panel de Render.")
+            if not tiene_internet:
+                raise RuntimeError("Error crítico: El servidor de Render perdió conectividad saliente a internet.")
+
         if not tiene_api_key and tiene_internet:
-            # CORRECCIÓN: Ajustado string informativo para reflejar la clave real usada
             print("ℹ️ Nota: Tienes internet, pero no has configurado GOOGLE_API_KEY en tu entorno.")
         return traducir_con_ollama_local(texto_markdown, prompt_sistema)
 
-# CORRECCIÓN: Se añade la función puente que main.py invoca pasando la ruta del archivo
 def traducir_archivo_md(ruta_md_original):
     """Lee el archivo .md original, procesa su traducción y guarda el resultado."""
     print("📖 Leyendo archivo Markdown original...")
@@ -83,7 +96,6 @@ def traducir_archivo_md(ruta_md_original):
 
     contenido_traducido = traducir_texto_matematico(contenido)
 
-    # Generamos la ruta de salida en la misma carpeta reemplazando el sufijo
     if "_original.md" in ruta_md_original:
         ruta_traducido = ruta_md_original.replace("_original.md", "_traducido.md")
     else:
