@@ -1,5 +1,5 @@
 # Usamos una base ligera de Python
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Instalar dependencias del sistema necesarias para Pandoc y XeLaTeX
 RUN apt-get update && apt-get install -y \
