@@ -1,4 +1,4 @@
-# convertidor.py
+#convertidor.py
 import os
 import re
 import subprocess
@@ -13,47 +13,48 @@ def preprocesar_notas_al_pie(texto_md):
     return texto_procesado
 
 def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
+    """
+    Procesa el archivo Markdown, limpia caracteres extraños, 
+    y compila a PDF usando Pandoc + XeLaTeX.
+    """
     if not ruta_pdf_salida:
         ruta_pdf_salida = ruta_md.replace(".md", ".pdf")
 
-    # Rutas absolutas de Windows
     ruta_md = os.path.abspath(ruta_md)
     ruta_pdf_salida = os.path.abspath(ruta_pdf_salida)
-
-    # Ruta para el archivo temporal corregido
     ruta_md_temp = ruta_md.replace(".md", "_procesado_temp.md")
 
-    print(f"🏛️ Compilando localmente a través de WSL con Pandoc + XeLaTeX...")
+    print(f"🏛️ Iniciando compilación académica...")
     try:
-        # 1. Leer original, procesar notas al pie y guardar en el temporal de Windows
+        # 1. Leer original y procesar notas al pie
         with open(ruta_md, "r", encoding="utf-8") as f:
             contenido = f.read()
 
         contenido_corregido = preprocesar_notas_al_pie(contenido)
 
+        # 2. LIMPIEZA PROFUNDA: Evita caracteres que rompen XeLaTeX en Linux
+        contenido_limpio = contenido_corregido.encode('utf-8', 'ignore').decode('utf-8')
+        
         with open(ruta_md_temp, "w", encoding="utf-8") as f:
-            f.write(contenido_corregido)
+            f.write(contenido_limpio)
 
-        # 2. TRADUCCIÓN DE RUTAS PARA WSL (Vital en local)
-        ruta_wsl_md = ruta_md_temp.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
-        ruta_wsl_pdf = ruta_pdf_salida.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
-
-        # 3. Construir el comando anteponiendo "wsl"
-        # Detección inteligente: Si estamos en Linux/Docker, no usamos "wsl"
-        # "os.name" devuelve "posix" en Linux/Docker y "nt" en Windows
+        # 3. Construcción del comando según el entorno
         if os.name == 'posix':
+            # Configuración para el Servidor (Render/Linux)
             comando = [
                 "pandoc", ruta_md_temp,
                 "-o", ruta_pdf_salida,
                 "--pdf-engine=xelatex",
+                "--standalone",              # Asegura proceso completo
+                "--top-level-division=chapter",
                 "-V", "geometry:margin=1in",
                 "-V", "mainfont=Liberation Serif",
-                "-V", "fontsize=12pt",          # <--- Esto ayuda a igualar el tamaño
-                "-V", "linestretch=1.5",       # <--- Esto da el espaciado académico
-                "--wrap=auto"                  # <--- Esto asegura que el texto no se corte
+                "-V", "fontsize=12pt",
+                "-V", "linestretch=1.5",
+                "--wrap=auto"
             ]
         else:
-            # Tu configuración actual de Windows + WSL
+            # Configuración para Windows + WSL
             ruta_wsl_md = ruta_md_temp.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
             ruta_wsl_pdf = ruta_pdf_salida.replace("\\", "/").replace("C:", "/mnt/c").replace("c:", "/mnt/c")
             comando = [
@@ -64,23 +65,22 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
                 "-V", "mainfont=Liberation Serif"
             ]
 
-        # 4. Ejecutar la compilación usando el Linux de tu WSL
-        subprocess.run(comando, capture_output=True, text=True, check=True)
+        # 4. Ejecución con captura de errores detallada
+        resultado = subprocess.run(comando, capture_output=True, text=True)
+        
+        if resultado.returncode != 0:
+            print(f"❌ ERROR EN PANDOC:\nSTDOUT: {resultado.stdout}\nSTDERR: {resultado.stderr}")
+            raise subprocess.CalledProcessError(resultado.returncode, comando, stderr=resultado.stderr)
 
-        # 5. Limpieza del archivo temporal
+        # 5. Limpieza
         if os.path.exists(ruta_md_temp):
             os.remove(ruta_md_temp)
 
+        print(f"🚀 PDF generado exitosamente.")
         return ruta_pdf_salida
 
-    except subprocess.CalledProcessError as e:
-        # Esto te imprimirá en la consola de VS Code el error exacto si LaTeX llora por algo
-        print(f"❌ Error crítico en el motor de Pandoc dentro de WSL:\n{e.stderr}")
-        if os.path.exists(ruta_md_temp):
-            os.remove(ruta_md_temp)
-        return None
     except Exception as e:
-        print(f"❌ Error inesperado: {e}")
-        if os.path.exists(ruta_md_temp):
+        print(f"❌ Error crítico: {e}")
+        if 'ruta_md_temp' in locals() and os.path.exists(ruta_md_temp):
             os.remove(ruta_md_temp)
         return None
