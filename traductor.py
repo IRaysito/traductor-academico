@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Carga el archivo .env si estás en local
+# Nota: Dejamos load_dotenv() como respaldo secundario por si ejecutas este script por separado
 load_dotenv()
 
 def verificar_internet():
@@ -20,10 +20,10 @@ def traducir_con_gemini_nube(texto_markdown, prompt_instrucciones, api_key):
     """Envía la traducción a los servidores de Google Gemini."""
     print("☁️ Conectando con los servidores de Google Gemini en la nube (Proceso rápido)...")
 
-    # Inicializa el cliente oficial moderno de Google
+    # Inicializa el cliente oficial moderno de Google con tu variable unificada
     client = genai.Client(api_key=api_key)
 
-    # Usamos gemini-2.5-flash
+    # Usamos gemini-2.5-flash para maquetación rápida de Markdown y LaTeX
     response = client.models.generate_content(
         model='gemini-2.5-flash',
         contents=f"{prompt_instrucciones}\n\nTexto original:\n\n{texto_markdown}"
@@ -31,7 +31,7 @@ def traducir_con_gemini_nube(texto_markdown, prompt_instrucciones, api_key):
     return response.text
 
 def traducir_con_ollama_local(texto_markdown, prompt_instrucciones):
-    """Ejecuta la traducción de respaldo local con Ollama."""
+    """Ejecuta la traducción de respaldo local con Ollama en tu máquina."""
     print("🏠 Usando el plan de respaldo: Iniciando Ollama (Llama 3) local...")
     llm = Ollama(model="llama3", temperature=0.2)
     prompt_completo = f"{prompt_instrucciones}\n\nTexto original:\n\n{texto_markdown}"
@@ -70,9 +70,29 @@ def traducir_texto_matematico(texto_markdown):
             return traducir_con_ollama_local(texto_markdown, prompt_sistema)
     else:
         if not tiene_api_key and tiene_internet:
-            print("ℹ️ Nota: Tienes internet, pero no has configurado GEMINI_API_KEY en tu entorno.")
+            # CORRECCIÓN: Ajustado string informativo para reflejar la clave real usada
+            print("ℹ️ Nota: Tienes internet, pero no has configurado GOOGLE_API_KEY en tu entorno.")
         return traducir_con_ollama_local(texto_markdown, prompt_sistema)
 
-def traducir_texto_markdown(contenido_markdown):
-    """Esta función puente conecta tu main.py con el coordinador de traducción."""
-    return traducir_texto_matematico(contenido_markdown)
+# CORRECCIÓN: Se añade la función puente que main.py invoca pasando la ruta del archivo
+def traducir_archivo_md(ruta_md_original):
+    """Lee el archivo .md original, procesa su traducción y guarda el resultado."""
+    print("📖 Leyendo archivo Markdown original...")
+    with open(ruta_md_original, "r", encoding="utf-8") as f:
+        contenido = f.read()
+
+    contenido_traducido = traducir_texto_matematico(contenido)
+
+    # Generamos la ruta de salida en la misma carpeta reemplazando el sufijo
+    if "_original.md" in ruta_md_original:
+        ruta_traducido = ruta_md_original.replace("_original.md", "_traducido.md")
+    else:
+        nombre_base, ext = os.path.splitext(ruta_md_original)
+        ruta_traducido = f"{nombre_base}_traducido{ext}"
+
+    print("💾 Guardando el documento traducido...")
+    with open(ruta_traducido, "w", encoding="utf-8") as f:
+        f.write(contenido_traducido)
+
+    print(f"✨ ¡Traducción finalizada con éxito!")
+    return ruta_traducido
