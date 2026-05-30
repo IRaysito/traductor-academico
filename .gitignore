@@ -220,3 +220,6 @@ __marimo__/
 # Mis carpetas de trabajo temporales
 archivos_entrada/
 archivos_salida/
+
+# Ignorar archivos
+.env
