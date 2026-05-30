@@ -43,11 +43,14 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
         # "os.name" devuelve "posix" en Linux/Docker y "nt" en Windows
         if os.name == 'posix':
             comando = [
-                "pandoc", ruta_md_temp, # Usamos la ruta local directa
+                "pandoc", ruta_md_temp,
                 "-o", ruta_pdf_salida,
                 "--pdf-engine=xelatex",
                 "-V", "geometry:margin=1in",
-                "-V", "mainfont=Liberation Serif"
+                "-V", "mainfont=Liberation Serif",
+                "-V", "fontsize=12pt",          # <--- Esto ayuda a igualar el tamaño
+                "-V", "linestretch=1.5",       # <--- Esto da el espaciado académico
+                "--wrap=auto"                  # <--- Esto asegura que el texto no se corte
             ]
         else:
             # Tu configuración actual de Windows + WSL
