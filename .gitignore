@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Mis carpetas de trabajo temporales
+archivos_entrada/
+archivos_salida/
