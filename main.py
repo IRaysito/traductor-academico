@@ -3,6 +3,10 @@ import shutil
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from convertidor import markdown_a_pdf
+from dotenv import load_dotenv
+
+load_dotenv() # Esto busca el archivo .env en tu laptop
+api_key = os.getenv("GOOGLE_API_KEY") # Esto funciona tanto en tu laptop como en Render
 
 app = FastAPI(title="API de Traducción y Maquetación Académica")
 
