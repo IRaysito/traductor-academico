@@ -47,7 +47,7 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
                 "-o", ruta_pdf_salida,
                 "--pdf-engine=xelatex",
                 "-V", "geometry:margin=1in",
-                "-V", "mainfont=Times New Roman"
+                "-V", "mainfont=Liberation Serif"
             ]
         else:
             # Tu configuración actual de Windows + WSL
@@ -58,7 +58,7 @@ def markdown_a_pdf(ruta_md, ruta_pdf_salida=None):
                 "-o", ruta_wsl_pdf,
                 "--pdf-engine=xelatex",
                 "-V", "geometry:margin=1in",
-                "-V", "mainfont=Times New Roman"
+                "-V", "mainfont=Liberation Serif"
             ]
 
         # 4. Ejecutar la compilación usando el Linux de tu WSL
